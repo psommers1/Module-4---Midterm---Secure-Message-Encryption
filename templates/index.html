@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Message Encryption - Paul Sommers</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        h1, h2 {
+            color: #333;
+        }
+
+        textarea, input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0 15px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .result {
+            background-color: white;
+            padding: 15px;
+            margin-top: 15px;
+            border: 1px solid #ddd;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+
+        hr {
+            margin: 30px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Secure Message Encryption</h1>
+    <p>by Paul Sommers</p>
+
+    <hr>
+
+    <h2>Encrypt Message</h2>
+    <label>Message:</label>
+    <textarea id="messageInput" rows="4" placeholder="Enter message..."></textarea>
+    <button onclick="encryptMessage()">Encrypt</button>
+
+    <div id="encryptResult" class="result">
+        <p><strong>Encrypted Message:</strong></p>
+        <textarea id="encryptedMessage" rows="2" readonly></textarea>
+        
+        <p><strong>Key:</strong></p>
+        <textarea id="encryptionKey" rows="2" readonly></textarea>
+        
+        <p><strong>IV:</strong></p>
+        <textarea id="iv" rows="1" readonly></textarea>
+        
+        <p><strong>Hash:</strong></p>
+        <textarea id="originalHash" rows="1" readonly></textarea>
+    </div>
+
+    <hr>
+
+    <h2>Decrypt & Verify Message</h2>
+    <label>Encrypted Message:</label>
+    <textarea id="encryptedInput" rows="2" placeholder="Paste encrypted message..."></textarea>
+
+    <label>Key:</label>
+    <input type="text" id="keyInput" placeholder="Paste key...">
+
+    <label>IV:</label>
+    <input type="text" id="ivInput" placeholder="Paste IV...">
+
+    <label>Original Hash:</label>
+    <input type="text" id="hashInput" placeholder="Paste hash...">
+
+    <button onclick="decryptMessage()">Decrypt & Verify</button>
+
+    <div id="decryptResult" class="result">
+        <p><strong>Decrypted Message:</strong></p>
+        <textarea id="decryptedMessage" rows="3" readonly></textarea>
+        
+        <p><strong>Decrypted Hash:</strong></p>
+        <textarea id="decryptedHash" rows="1" readonly></textarea>
+        
+        <div id="integrityStatus"></div>
+    </div>
+
+    <script>
+        async function encryptMessage() {
+            const message = document.getElementById('messageInput').value;
+            
+            if (!message.trim()) {
+                alert('Please enter a message');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/encrypt', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ message: message })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('encryptedMessage').value = data.encrypted_message;
+                    document.getElementById('encryptionKey').value = data.key;
+                    document.getElementById('iv').value = data.iv;
+                    document.getElementById('originalHash').value = data.original_hash;
+                    document.getElementById('encryptResult').classList.add('show');
+                    
+                    document.getElementById('encryptedInput').value = data.encrypted_message;
+                    document.getElementById('keyInput').value = data.key;
+                    document.getElementById('ivInput').value = data.iv;
+                    document.getElementById('hashInput').value = data.original_hash;
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        async function decryptMessage() {
+            const encryptedMessage = document.getElementById('encryptedInput').value;
+            const key = document.getElementById('keyInput').value;
+            const iv = document.getElementById('ivInput').value;
+            const originalHash = document.getElementById('hashInput').value;
+            
+            if (!encryptedMessage.trim() || !key.trim() || !iv.trim() || !originalHash.trim()) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/decrypt', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        encrypted_message: encryptedMessage,
+                        key: key,
+                        iv: iv,
+                        original_hash: originalHash
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('decryptedMessage').value = data.decrypted_message;
+                    document.getElementById('decryptedHash').value = data.decrypted_hash;
+                    
+                    const statusDiv = document.getElementById('integrityStatus');
+                    if (data.integrity_verified) {
+                        statusDiv.innerHTML = '<p class="success">✓ Integrity Verified</p>';
+                    } else {
+                        statusDiv.innerHTML = '<p class="error">✗ Integrity Check Failed</p>';
+                    }
+                    
+                    document.getElementById('decryptResult').classList.add('show');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

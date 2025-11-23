@@ -1,0 +1,32 @@
+# Docker Compose configuration for Secure Message Encryption Application
+# Author: Paul Sommers
+
+version: '3.8'
+
+services:
+  # Flask web application service
+  web:
+    # Build the Docker image from the Dockerfile in current directory
+    build: .
+    
+    # Container name
+    container_name: secure-message-encryption
+    
+    # Port mapping: host:container
+    # Access the application at http://localhost:5000
+    ports:
+      - "5000:5000"
+    
+    # Environment variables
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Mount the application directory for development
+    # Changes to code will be reflected without rebuilding
+    volumes:
+      - ./app.py:/app/app.py
+      - ./templates:/app/templates
